@@ -9,6 +9,14 @@ RECEIVER_FILE = "run_receiver.py"
 AVERAGE_SEGMENT_SIZE = 80
 
 def generate_mahimahi_command(mahimahi_settings: Dict) -> str:
+    """return a string of mahimahi command
+
+        Args:
+            mahimahi_settings (Dict): delay, queue_szie, loss_directive(optional only), trace_file
+
+        Returns:
+            str: mahimahi command which can be run in bash
+    """
     if mahimahi_settings.get('loss'):
         loss_directive = "mm-loss downlink %f" % mahimahi_settings.get('loss')
     else:
@@ -20,7 +28,7 @@ def generate_mahimahi_command(mahimahi_settings: Dict) -> str:
       trace_file=mahimahi_settings['trace_file']
     )
 
-def get_open_udp_port():
+def get_open_udp_port():# TODO? maybe need some knowledge of socket (unp)
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -62,12 +70,19 @@ def print_performance(sender: Sender, num_seconds: int):
     print("")
     
 def run_with_mahi_settings(mahimahi_settings: Dict, seconds_to_run: int, senders: List):
+    """run mahimahi command with Runtime and Senders given
+
+    Args:
+        mahimahi_settings (Dict): delay, queue_size, loss_directive, trace_file of mahimahi parse_args
+        seconds_to_run (int): running duration time
+        senders (List): instances of Sender of specific ports and some strategy
+    """
     mahimahi_cmd = generate_mahimahi_command(mahimahi_settings)
 
-    sender_ports = " ".join(["$MAHIMAHI_BASE %s" % sender.port for sender in senders])
+    sender_ports = " ".join(["$MAHIMAHI_BASE %s" % sender.port for sender in senders])# TODO? what's MAHIMAHI_BASE
     
-    cmd = "%s -- sh -c 'python3 %s %s'" % (mahimahi_cmd, RECEIVER_FILE, sender_ports)
-    receiver_process = Popen(cmd, shell=True)
+    cmd = "%s -- sh -c 'python %s %s'" % (mahimahi_cmd, RECEIVER_FILE, sender_ports) # TODO? RECEIVER_FILE here is run_receiver.py which could not be found
+    receiver_process = Popen(cmd, shell=True) # TODO? Ppopen() and kill() usage
     for sender in senders:
         sender.handshake()
     threads = [Thread(target=sender.run, args=[seconds_to_run]) for sender in senders]
